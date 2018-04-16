@@ -1,4 +1,6 @@
 acmart.cls
+*.jpg
+*.jpeg
 acmart.pdf
 acmguide.pdf
 conf.pdf

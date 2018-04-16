@@ -1,360 +1,237 @@
 \section{Introduction}
+Model checking \cite{Clark:2000, Clarke:2008:BMC:1423535.1423536} is first introduced by Edmund Clarke and Allen Emerson in 1981 to solve the Concurrent Program Verification. It has a state-transition graph (denote as a model) and some logic formulas (denote as properties). The algorithm of model checking will search every states under the model to find out a path to satisfy the properties. In other words, if we write a property about the happening of mutual exclusion and the model checker find a path toward it, we can trace the error messages back to the situation and inspect whether the model or the real-world system will suffer from the mutual exclusion problem.
 
-The \textit{proceedings} are the records of a conference.\footnote{This
-  is a footnote}  ACM seeks
-to give these conference by-products a uniform, high-quality
-appearance.  To do this, ACM has some rigid requirements for the
-format of the proceedings documents: there is a specified format
-(balanced double columns), a specified set of fonts (Arial or
-Helvetica and Times Roman) in certain specified sizes, a specified
-live area, centered on the page, specified size of margins, specified
-column width and gutter size.
+Concurrent errors are hard to detect by code review or test case, because we can not guarantee the asynchronous processes executing in a specific order. Another way to ensure the correctness of concurrent programs is by proof, one example is that Lamport proves the correctness of a fast mutual exclusion algorithm in 1987 \cite{Lamport:1987:FME:7351.7352}. But, this strong guarantee requires the preliminary of proof tactic and constructs by hands. Model checking, though, has weaker guarantee but is more expeditious only if the abstract model and the real-world system are homogeneous. Furthermore, the correctness of the algorithm can not stand for the correctness of the implementation on other hardware or software mechanisms, i.e. interrupt or softirq. Holzmann \cite{Holzmann:2014:MC:2556647.2560218} organizes model checking is one of the three topics that the Mars Science Laboratory (MSL, launched by NASA) has used to reduce risk in complex software systems. He also points out that they had successfully verified several concurrent issues on key parts of the spacecraft, including Cassini, Deep Space One, and the Mars Exploration rovers.
 
-\section{The Body of The Paper}
-Typically, the body of a paper is organized into a hierarchical
-structure, with numbered or unnumbered headings for sections,
-subsections, sub-subsections, and even smaller sections.  The command
-\texttt{{\char'134}section} that precedes this paragraph is part of
-such a hierarchy.\footnote{This is a footnote.} \LaTeX\ handles the
-numbering and placement of these headings for you, when you use the
-appropriate heading commands around the titles of the headings.  If
-you want a sub-subsection or smaller part to be unnumbered in your
-output, simply append an asterisk to the command name.  Examples of
-both numbered and unnumbered headings will appear throughout the
-balance of this sample document.
+Piko/RT \cite{PikoRT}, developed at National Cheng Kung University, Taiwan, 2017, is a non-trivial system but small enough for us to verify. One of the key features is real-time capability. It enables interrupts (exceptions) almost all the executing time to handle the incoming IRQs. Moreover, it is optimized for the ARM Cortex-M series. Until 2015 \cite{ARMProduct}, ARM had shipped 20.6 billion Cortex-M units within six years and the number are growing. It is hard to debug if such a number of devices deployed around in different areas. Not to mention the software system must not behave unexpectedly in the critical usages.
 
-Because the entire article is contained in the \textbf{document}
-environment, you can indicate the start of a new paragraph with a
-blank line in your input file; that is why this sentence forms a
-separate paragraph.
+In this paper, we address the problem of verifying the simple concurrent programs will not act unexpectedly (no mutual exclusion, starvation, and deadlock) under the specific conditions (preemptive scheduling and interrupt-driven mechanisms). We first construct an abstract model of the Spin model checker based on three domains: proof framework of eChronos, source code of Piko/RT, and reference manual of ARMv7-M, discussing in section 3. Next, write three properties (safety property for mutual exclusion, liveness properties for starvation and deadlock in LTL formula) and verify in Spin (section 4 and 5). Last but not least, discuss the background knowledge and summarize the conclusions in section 2 and 6. All our model\footnote{\url{https://github.com/kaizsv/pikoRT-Spin.git}} is in the public domain.
 
-\subsection{Type Changes and {\itshape Special} Characters}
+\section{Background}
+We use Spin as our model checking tool and build an abstract scheduling model on. In this section, we discuss some topics about Spin model checker and the real-time scheduling before approaching to the model. And then, talk about several related works of this paper.
 
-We have already seen several typeface changes in this sample.  You can
-indicate italicized words or phrases in your text with the command
-\texttt{{\char'134}textit}; emboldening with the command
-\texttt{{\char'134}textbf} and typewriter-style (for instance, for
-computer code) with \texttt{{\char'134}texttt}.  But remember, you do
-not have to indicate typestyle changes when such changes are part of
-the \textit{structural} elements of your article; for instance, the
-heading of this subsection will be in a sans serif\footnote{Another
-  footnote here.  Let's make this a rather long one to see how it
-  looks.} typeface, but that is handled by the document class file.
-Take care with the use of\footnote{Another footnote.}  the
-curly braces in typeface changes; they mark the beginning and end of
-the text that is to be in the different typeface.
+\subsection{The model checker}
+\subsubsection{Spin}
+Spin \cite{SpinRoot, Ben-Ari:2008:PSM:1349767, Holzmann:2003:SMC:1405716} is an open-source verification tool of multi-threaded software developed in the Computing Science Research group of Bell Lab. The theory behind Spin is the $\omega$-automaton, which is the variation of classic finite state automata with the infinite executions of acceptance conditions. Consider Fig \ref{fig:fsaex}, note that the termination of the automata would not necessarily be a desirable result. We can declare some state that will be visited infinitely often by labeling \textit{accept}, i.e. Run state, as a legal run. Because the states are finite, the infinite run ($\omega$-run) will anyway repeat itself at the certain degree just like Fig \ref{fig:buchi} shows. If Spin find an $\omega$-run with some state labeling \textit{accept}, it can claim that the automata is accepted. This is so called the B\"uchi acceptance.
 
-You can use whatever symbols, accented characters, or non-English
-characters you need anywhere in your document; you can find a complete
-list of what is available in the \textit{\LaTeX\ User's Guide}
-\cite{Lamport:LaTeX}.
+\begin{figure}
+\begin{subfigure}[b]{0.2\textwidth}
+\includegraphics[width=\textwidth]{fsaex}
+\caption{Finite state infinite run automata.}
+\label{fig:fsaex}
+\end{subfigure}
+\quad
+\begin{subfigure}[b]{0.16\textwidth}
+\includegraphics[width=\textwidth]{buchi}
+\caption{A path of $\omega$-run}
+\label{fig:buchi}
+\end{subfigure}
+\caption{Example of $\omega$-automaton}
+\end{figure}
 
-\subsection{Math Equations}
-You may want to display math equations in three distinct styles:
-inline, numbered or non-numbered display.  Each of
-the three are discussed in the next sections.
+Every thread in Spin is an automata and product altogether in the verifying stage. Spin supports a meta language: PROMELA, which interpreting readable script into automata, like common condition statements, \texttt{if} or \texttt{do}. It also provides \texttt{channel} allowing the communication between two threads. And the most important one in this paper is the \textit{guard}. \textit{guard} is a true of false expression that guard the execution of the following statements only if it is true, otherwise the thread will be blocked until it becomes true.
 
-\subsubsection{Inline (In-text) Equations}
-A formula that appears in the running text is called an
-inline or in-text formula.  It is produced by the
-\textbf{math} environment, which can be
-invoked with the usual \texttt{{\char'134}begin\,\ldots{\char'134}end}
-construction or with the short form \texttt{\$\,\ldots\$}. You
-can use any of the symbols and structures,
-from $\alpha$ to $\omega$, available in
-\LaTeX~\cite{Lamport:LaTeX}; this section will simply show a
-few examples of in-text equations in context. Notice how
-this equation:
-\begin{math}
-  \lim_{n\rightarrow \infty}x=0
-\end{math},
-set here in in-line math style, looks slightly different when
-set in display style.  (See next section).
+\subsubsection{Linear temporal logic}
+\textit{Safety and liveness}. We need to discuss these two kinds of properties before going to the linear temporal logic, which are introduced by Lamport in 1977 \cite{Lamport:1977:PCM:1313313.1313439}. Safety property guarantees nothing bad ever happens, i.e. more than two processes access same critical section at the same time will never happen. Liveness property denotes as something good eventually happens, i.e. if a process wants to enter its critical section, it can eventually enter. Above is only the informal expression of two types of properties.
 
-\subsubsection{Display Equations}
-A numbered display equation---one set off by vertical space from the
-text and centered horizontally---is produced by the \textbf{equation}
-environment. An unnumbered display equation is produced by the
-\textbf{displaymath} environment.
+\textit{Fairness} is another issue of temporal logic. We can not assume relative speeds of asynchronous processes, there might exist a run that when a process can execute, but never be executed. This is called the unfair processes. Two commonly used variants of fairness are:
 
-Again, in either environment, you can use any of the symbols
-and structures available in \LaTeX\@; this section will just
-give a couple of examples of display equations in context.
-First, consider the equation, shown as an inline equation above:
-\begin{equation}
-  \lim_{n\rightarrow \infty}x=0
-\end{equation}
-Notice how it is formatted somewhat differently in
-the \textbf{displaymath}
-environment.  Now, we'll enter an unnumbered equation:
-\begin{displaymath}
-  \sum_{i=0}^{\infty} x + 1
-\end{displaymath}
-and follow it with another numbered equation:
-\begin{equation}
-  \sum_{i=0}^{\infty}x_i=\int_{0}^{\pi+2} f
-\end{equation}
-just to demonstrate \LaTeX's able handling of numbering.
+{\medbreak\indent\textit{\textbf{weak fairness}: If a statement is continuously enabled, it will eventually be executed}}
+{\\\indent\textit{\textbf{strong fairness}: If a statement is enabled infinitely often, it will eventually be executed}}
+\medbreak
 
-\subsection{Citations}
-Citations to articles~\cite{bowman:reasoning,
-clark:pct, braams:babel, herlihy:methodology},
-conference proceedings~\cite{clark:pct} or maybe
-books \cite{Lamport:LaTeX, salas:calculus} listed
-in the Bibliography section of your
-article will occur throughout the text of your article.
-You should use BibTeX to automatically produce this bibliography;
-you simply need to insert one of several citation commands with
-a key of the item cited in the proper location in
-the \texttt{.tex} file~\cite{Lamport:LaTeX}.
-The key is a short reference you invent to uniquely
-identify each work; in this sample document, the key is
-the first author's surname and a
-word from the title.  This identifying key is included
-with each item in the \texttt{.bib} file for your article.
+\textit{LTL}. Temporal logic allows us to formalize the properties of a run unambiguously with some special operators. Most relevant to the verification of asynchronous process systems is a specific branch of temporal logic, linear temporal logic (LTL). The difference between the LTL and other branch of temporal logics is that, each task in a run is performed concurrently and determinedly. It is sufficient to describe two operators in the scope of this paper. Let $f$ be a LTL formula. Operators in $f$ such as \texttt{not}, \texttt{and}, \texttt{or}, \texttt{implication}, and \texttt{equivalence} are still a LTL formula. Two further temporal operators \textit{global} and \textit{future} are introduced below and Fig \ref{fig:ltl}:
 
-The details of the construction of the \texttt{.bib} file
-are beyond the scope of this sample document, but more
-information can be found in the \textit{Author's Guide},
-and exhaustive details in the \textit{\LaTeX\ User's
-Guide} by Lamport~\shortcite{Lamport:LaTeX}.
+{\medbreak\indent\textit{$\Box f$: $f$ is true now and forever in rest of the run}}
+{\\\indent\textit{$\Diamond f$: $f$ is true eventually in the future run}}
+\medbreak
 
-This article shows only the plainest form
-of the citation command, using \texttt{{\char'134}cite}.
+\begin{figure}
+\includegraphics[width=0.9\linewidth]{ltl}
+\caption{Semantics of Global and Future operators}
+\label{fig:ltl}
+\end{figure}
 
-Some examples.  A paginated journal article \cite{Abril07}, an enumerated
-journal article \cite{Cohen07}, a reference to an entire issue \cite{JCohen96},
-a monograph (whole book) \cite{Kosiur01}, a monograph/whole book in a series (see 2a in spec. document)
-\cite{Harel79}, a divisible-book such as an anthology or compilation \cite{Editor00}
-followed by the same example, however we only output the series if the volume number is given
-\cite{Editor00a} (so Editor00a's series should NOT be present since it has no vol. no.),
-a chapter in a divisible book \cite{Spector90}, a chapter in a divisible book
-in a series \cite{Douglass98}, a multi-volume work as book \cite{Knuth97},
-an article in a proceedings (of a conference, symposium, workshop for example)
-(paginated proceedings article) \cite{Andler79}, a proceedings article
-with all possible elements \cite{Smith10}, an example of an enumerated
-proceedings article \cite{VanGundy07},
-an informally published work \cite{Harel78}, a doctoral dissertation \cite{Clarkson85},
-a master's thesis: \cite{anisi03}, an online document / world wide web
-resource \cite{Thornburg01, Ablamowicz07, Poker06}, a video game (Case 1) \cite{Obama08} and (Case 2) \cite{Novak03}
-and \cite{Lee05} and (Case 3) a patent \cite{JoeScientist001},
-work accepted for publication \cite{rous08}, 'YYYYb'-test for prolific author
-\cite{SaeediMEJ10} and \cite{SaeediJETC10}. Other cites might contain
-'duplicate' DOI and URLs (some SIAM articles) \cite{Kirschmer:2010:AEI:1958016.1958018}.
-Boris / Barbara Beeton: multi-volume works as books
-\cite{MR781536} and \cite{MR781537}.
+Let us consider an example of mutual exclusion. Fig \ref{fig:mutex} contains two processes and \textit{CS} is the critical section of that process. Each process is first in non-critical section. If one process want to access its shared variables in critical section, it must try to gain lock first at \textit{Try-CS} state and leave the critical section as soon as possible. We can write down the LTL formula about mutual exclusion, starvation, and deadlock as follows:
 
-A couple of citations with DOIs: \cite{2004:ITE:1009386.1010128,
-  Kirschmer:2010:AEI:1958016.1958018}.
+{\medbreak\indent\textit{\textbf{mutual exclusion}: $\Box\neg(\text{CS}_1\wedge\text{CS}_2)$}}
+{\\\indent\textit{\textbf{starvation}: $\Box\Diamond \text{Try-CS}_1\rightarrow\Box\Diamond\text{CS}_1$}}
+{\\\indent\textit{\textbf{deadlock}: $\Box\Diamond(\text{Try-CS}_1\wedge\text{Try-CS}_2)\rightarrow\Box\Diamond(\text{CS}_1\vee\text{CS}_2)$}}
+\medbreak
 
-Online citations: \cite{TUGInstmem, Thornburg01, CTANacmart}.
+The first property is simple. Both processes can not access its critical section at the same time in every state of a run. The rest are the liveness properties. Starvation property means if a process try to enter its critical section infinitely often, it will be in critical section infinitely often. And deadlock property means if both processes try to enter each critical section infinitely often, at least one process can enter its critical section infinitely often. Note that I use ``infinitely often'' frequently, represents the properties are strong fairness. This is will be discuss later in section 4.
 
+\begin{figure}
+\includegraphics[width=0.7\linewidth]{mutex}
+\caption{Mutual exclusion}
+\label{fig:mutex}
+\end{figure}
 
-\subsection{Tables}
-Because tables cannot be split across pages, the best
-placement for them is typically the top of the page
-nearest their initial cite.  To
-ensure this proper ``floating'' placement of tables, use the
-environment \textbf{table} to enclose the table's contents and
-the table caption.  The contents of the table itself must go
-in the \textbf{tabular} environment, to
-be aligned properly in rows and columns, with the desired
-horizontal and vertical rules.  Again, detailed instructions
-on \textbf{tabular} material
-are found in the \textit{\LaTeX\ User's Guide}.
+To understand how Spin verifying LTL formula, consider its as a game. Spin first coverts a LTL formula into \textit{never claim} and negates the formula. The \textit{never claim} is also an automata that can product together with the model. The Spin model checker then play the game with the model one step by one step. Spin wins the game if it finds an acceptance cycle. Remember we had negated the formula, the acceptance cycle means a counterexample of formula in the model which violates the property. On the contrary, if \textit{never claim} never reaches the acceptance state means the model satisfied the formula.
 
-Immediately following this sentence is the point at which
-Table~\ref{tab:freq} is included in the input file; compare the
-placement of the table here with the table in the printed
-output of this document.
+\subsection{Real-time scheduling}
+A real-time system is a set of tasks that run concurrently on uniprocessor or parallel on multi-processors and can simply classify into preemptive and non-preemptive scheduling. Non-preemptive scheduling has lower context switch latency but the interrupt handler might violate the deadline. And preemptive scheduling forces each task to process under a limited time and the task might be blocked (pending) even if within its timeslice. In this section we discuss several factors which affect the behavior of preemptive scheduling from the hardware and software aspects. The hardware is the mechanisms of ARMv7-M architecture and the software is the implementation of the case study.
+
+\subsubsection{Exception of ARMv7-M architecture}
+ARMv7-M architecture \cite{ARMv7-M:Manual, Yiu:2013:DGA:2602039} uses ``exception'' as a response to system event and ``interrupt'' as a peripheral request. Exception (or interrupt) with higher priority level can preempt the lower one. Moreover, synchronous exception like non-maskable interrupt (reset, hardware fault), system fault, and SVCall must execute before the context switch. This means synchronous exception can only be preempted by higher priority level exception before changing to the next task. The incoming exception will be pending if the priority level is less than or equal to the current one. Other exceptions are considered asynchronous that we can not guarantee the timing of executing, even after the context switching.
+
+\textit{Exception entry and exception return} are the mechanism before and after the exception handler take place on ARMv7-M architecture. While an exception occurs, the hardware will compare the priority of current task and the coming exception. The exception entry will push parts of the context into the stack and reset return values of current context if the coming exception is allowed to preempt according to the interrupt policy. After finishing the handler task, the exception return will choose a proper task (from the stack or the pending state) to switch to.
+
+\textit{Tail-chaining and late-arriving} are the further extension of the exception return. Tail-chaining can proceed to process the pending exception rather than restoring the context from the stack. In this way, the timing gap between the two exception handlers is considerably reduced. As for late-arrival, the processor accepts the exception request and starts executing exception entry. If during the stacking process another exception with higher priority level takes place, the exception arrives lately will be serviced first.
+
+\textit{Context switch} is a significant issue in this paper. Context switch typically requires processor to execute at a critical region of interrupt disabled to avoid the corruption of data during the switch, However, the busy waiting might causes the coming exception be pending and violates the deadline. ARMv7-M supports interrupt enabled context switch. SVCall is a synchronous exception and triggered by the \texttt{svc} instruction from user tasks to perform supervisor call. PendSV is an asynchronous software interrupt and handles the scheduling point enabled by the systick handler. To enable interrupt during context switch, configure both exceptions with the lowest priority level that they can not preempt each others.
+
+\subsubsection{Preemptive scheduling}
+Preemptive scheduling causes the task to stop and resume executing frequently. One reason is the task reaches its timeslice and does not finish yet, the scheduler need switch to the next task from the runqueue. Another reason is when a task with higher priority added into the runqueue, at any scheduling points the system needs to guarantee the priority of current task is always the highest one in the runqueue. Follows lists several aspects which will influence the behavior of the preemptive scheduling.
+
+\textit{Bitmap scheduler} has 32 priority levels and two priority arrays, active and expired, which can be swapped in constant time. The scheduler always chooses the highest priority task from the active priority runqueue and selected in round-robin way if multiple tasks exist in the same priority level. The implementation of array data structure and the bitwise operations make the upper bound of bitmap in constant time.
+
+\textit{Softirq and tasklet}. Interrupt handlers are asynchronous and often timing-critical so there are several limitations, such as respond rapidly and cannot be blocked. Softirq is the mechanism that moves the execution of the non-critical job (bottom half task) from interrupt handlers to the user task (softirq process). Moreover, softirq maintains a bitmap scheduler with only one runqueue to manage the different bottom half tasks, called tasklet.
+
+\textit{Mutual exclusion} is one of the solutions of concurrent program and has different implementations. In this paper, we focus on a pair of load-link/store-conditional instructions, \texttt{ldrex} and \texttt{strex}, supported by a state machine \textit{exclusive monitor} provided by ARMv7-M architecture. Each processor has a exclusive monitor called local monitor (we only consider uniprocessor situation here), which will mark a segment of memory address (register) as \textit{exclusive} by the calling of \texttt{ldrex} instruction. One local monitor can only mark one register at the same time, \texttt{ldrex} will load a value from the address to the register and clear the previous mark and mark the address as exclusive. \texttt{strex} conditionally stores the value back to the address if the address is marked as exclusive and clear the mark at the same time, otherwise the store will fail notifying by the return value. In brief, no matter how many times \texttt{ldrex} mark the address, only one can update the value of that address by \texttt{strex}. And finally, all mark will be cleared at every exception return stage. This make sure the atomic operations of the mutex variables.
+
+\textit{Condition variable} is an extension of mutual exclusion. It will temporary release the lock and move itself out of the runqueue if the condition is not satisfied (condition wait). While others get the lock and satisfy the condition statement, it signals the blocked one by returning the lock and enqueuing the blocked one again (condition signal). This is more efficient than busy waiting because the blocked one will temporarily gives up the processor's resources and turns to the process.
+
+\subsection{Related work}
+\textit{eChronos} \cite{DBLP:conf/itp/AndronickLMMR16} is a tiny real-time OS running on ARM Cortex-M3 platform developed by Data61 in Australia. They provide a framework and prove the property ``the running task is always in the highest priority'' on the Isabelle/HOL proof assistance based on the Owicki-Gries \cite{Owicki:1976:APT:2696887.2697004} method. The OG method is the parallel version of Hoare logic, which known as the pre- and post- condition style, guaranteeing the shared variables are not interleaving by the parallel programs. Their framework is delicate and scalable that simulates both software and hardware behaviors in one model. But the challenge of their work are the exhausting hand constructed proof and the lack of implementation details. The reason of the later one is the proof strategic that they do not declare the explicit interrupt policy, causing all exceptions can preemptive each other. Instead, they have proved a larger range of the exception behavior is correct that can implicate to the limited and real one.
+
+\textit{OSEK-Spin}, Zhang, et al. \cite{10.1007/978-3-319-17581-2_16} use Spin to verify the application of a standard automobile OS, OSEK/VDX, which is widely adopted by many automobile manufacturers. To enhance the user experience, different applications are developed based on the OS. To check whether the applications can run correctly, the researcher provide a Spin-based model that can replicate the executions on OSEK. The correctness means under the concurrent running task, synchronous event, and context switch, the user application will not suffer from mutual exclusion or priority inversion. They also developed a bounded model checking to verify a more complex applications. However, the model considered only the software aspect and did not contain the specific hardware behavior.
+
+In summary, the two researches list above are the most related to our paper. Nevertheless, there are a lots of corresponding work about verifying software or hardware by mathematical proof, for example, seL4 \cite{Klein:2009:SFV:1629575.1629596}. However, the design of seL4 kernel is optimized for the formal verification, there are some limitations. Although seL4 had analyzed the WCET \cite{6121451}, its kernel code only has few interrupt points to enable the interrupt, others reminds interrupt disabled. This is different from the common design of RTOS.
+
+\section{The model}
+
+\begin{figure*}
+\includegraphics[width=0.7\linewidth]{model}
+\caption{The schema of the model (2 user tasks, 2 interrupts)}
+\label{fig:model}
+\end{figure*}
+
+In section 2, we had discussed several factors of scheduling. In this section, we only show how we model those factors by PROMELA. The model is consisted of three static processes (SVC, PendSV, and softirq) and an amount of user tasks and interrupts (number of interrupt must contain one systick). Fig \ref{fig:model} is a schema of 2 user tasks and 2 interrupts. The model can separate into three parts: user task for the orange box, exception for the blue one, and two special exceptions SVC and PendSV for the green one. Each process has a PID listed at the top of Fig \ref{fig:model}.
+
+\subsection{Overview}
+We had mentioned that each process are executed in asynchronous order, we use this feature to simulate the incoming of the IRQs. But to determine which process is the legal one to occupy the resource of processor, eChronos introduced a guard called \textit{AWAITS} to control the executing of the processes. Another variable \textit{AT} (active task) records which process is the legal on to be executed. Every statement in the model will be wrap by \textit{AWAITS} and can be executed only if the \textit{AT} becomes its PID, otherwise, the statement will be blocked until AT becoming its PID again. Note that the segment surrounding by a frame means each statement in the frame is wrapped by \textit{AWAITS}.
+
+Starting from SVC handler first, we modeled five system calls listed in Fig \ref{fig:model}. Consider that SVC is synchronous, we use a synchronous channel called rendezvous channel in PROMELA to perform the behavior of calling the system call. It is something like the client/server model that the SVC handler is the server and serves several user tasks. The different is that other processes remind blocked during the communication. Recall the interrupt enabled context switch, PendSV is asynchronous and used to response the scheduling request from the systick. Simultaneously, the systick handler will insert its bottom half task into the tasklet runqueue waiting to be executed in softirq process. Another interrupt handler do nothing in the model. Last, we choose the classic consumer/producer program as our application to verify and the softirq will discuss later.
+
+\subsection{Exceptions of ARMv7-M architecture}
+Fig \ref{fig:model} shows that every exception is started with \textit{xTake} and end with \textit{IRet} (except SVC is synchronous) which are the imitation of exception entry and exception return. There are two situations in \textit{ITake}. First, we referenced to the manual of ARMv7-M to implement the interrupt policy, including the priority and the pending state to determine whether the incoming IRQs can preempt the current process. We will come back to the second situation after the explaining of \textit{IRet}. \textit{PendSVTake} is a simplify of \textit{ITake} and only affect to the PendSV process. An array \textit{ATStack} which store the preempted processes that has not finishing its job yet. \textit{IRet} elects the next running task from \textit{ATStack} or pending state when the current interrupt handler is finished. Consider that the exception in pending state has not been executed yet (late-arrival comes first), an additional variable \textit{ghost\_direct\_AT} records this situation and detected by the second condition of \textit{ITake}. And this is similar to the tail-chaining in ARMv7-M.
+
+The design of \textit{ATStack} is an array data structure that the last element in it must be user task, others remind exceptions in priority order. The performance of context switch in the model is to change the last element in \textit{ATStack}. Because context switch only occurs in SVC or PendSV processes, the only element in \textit{ATStack} must be current user task and the \textit{AT} must be the PID of SVC or PendSV. We add several assert to check this scene and change the last element in \textit{ATStack} to reproduce the behavior of context switch.
+
+\subsection{Preemptive scheduling}
+Two priority runqueues, which contains an unsigned map and a queue, construct the structure of bitmap scheduler. One key difference between the model and the source code is the swap of two priority runqueues. The source code uses pointer to swap each other, however, the model uses bitwise operations to do that. Two priority runqueues \textit{sched\_bm[2]} are placed in the model. Another global bit \textit{SCHED\_STATE\_SWAP} is helped to distinguish each runqueue. To swap the runqueues, just \texttt{xor} the swap bit. Additionally, the \textit{ACTIVE} and \textit{EXPIRED} thread state are designed in the same way.
+
+{\medbreak\indent\textit{\textbf{ACTIVE}: $(0 | \text{SCHED\_STATE\_SWAP})$}}
+{\\\indent\textit{\textbf{EXPIRED}: $(1 \oplus \text{SCHED\_STATE\_SWAP})$}}
+\medbreak
+
+In short, the \textit{softirq} is a user process which executes the bottom half task of the interrupts. And the \textit{tasklet} is a one priority runqueue managing which bottom half tasks take place first. If no more bottom half task can be executed, the softirq process will give up the processor's resource by calling the pthread yield system call. But notice that if the softirq has higher priority than other user processes, the system call still choose softirq as next process.
+
+The lock and unlock of \textit{mutex} can split into two stage: non-privilege and privilege because of the supporting of load-link/store-conditional instructions. Take mutex lock for example, if the lock is free then gain lock directly in the non-privilege mode by the mechanism of LL/SC, otherwise, calling the mutex lock system call to give up the execution (moving itself out of the runqueue). A further point to note that, there must have a place to store the tasks moving out of the runqueue by mutex. But the implementation of the source code is a linked list structure, we can not reproduce in PROMELA model, instead, we use an array. However, to reduce the size of the model, there is only one slot in the array currently and scalable depending on the applications.
+
+Implementation of \textit{condition variable} is based on the mutex that will temporary release the lock and gain lock again if the condition is satisfied. Nonetheless, this is difficult to implement in PROMELA. In source code, every process performing context switch in SVC or PendSV handlers which will stop at a specific point in the handler and resuming when switching back. If we want to emulate this behavior in PROMELA model, the SVC and PendSV handler must duplicate times of the number of user task. This is a great effort for model checking that we need to share the SVC and PendSV handler within each user task. This leads to another problem that we can not place two scheduling points in one exception handler and the scheduling point must establish just before the \textit{IRet}. This limits the modeling of condition wait system call that we need to use two system calls (condition wait and mutex lock) and wrap together with \textit{atomic} statement to complete the one system call's job.
+
+\section{Strategic of verification}
+We had talked about the model, now discussing the properties and how we verifying the model by Spin model checker.
+
+\subsection{The properties} Those two methods are used to verify the correctness of the model:
+\begin{enumerate*}[label={\roman*)},font={\bfseries}]
+\item \textit{assert} for safety property,
+\item \textit{LTL} for liveness properties.
+\end{enumerate*}
+The \textit{assert} is not only the safety property but also a useful tool to check whether the model is correct during the process of modeling. We use \textit{assert} in the following ways.
+\begin{itemize}
+\item The insertion of the queue will not buffer overflow and the deletion of the queue must succeed.
+\item If the map is not zero, there must be some elements in the queue.
+\item If the scheduler choose idle as next thread, the current thread must not be idle.
+\item The modification of IRQ pending state must be the interrupt process.
+\item The tail-chaining only happens that no other exception priority in pending state is higher than itself.
+\item The \textit{ATStack} will not buffer overflow.
+\item PendSV can only preempt the user task.
+\item The consumer/producer will not suffer from mutual exclusion by \textit{cs} bit, modified when the value of mutex is changed.
+\item Only user task can perform the system call at the situation of no pending exceptions.
+\item Only user task can perform context switch at the situation of no active exceptions.
+\item Only the last element in \textit{ATStack} is user task, others remind \textit{UNKNOWN} during the context switch.
+\item Mutex list (array) must not be empty if the value of mutex is larger than zero.
+\item The value of mutex must not smaller than -1.
+\end{itemize}
+For LTL, we label the condition loop as \textit{want}, means that the process wants to enter its critical section but blocked at the condition loop. The $@$ symbol means the execution is at the statement with specific label. Note that we apply the strong fairness in the LTL formula. If not, the model checker will consider the situation that the systick preempt itself forever. But this is impossible that the duration of systick is 1ms in the real-world system.
+
+{\smallbreak\indent\textit{\textbf{consumer starvation free}: $\Box\Diamond\text{consumer@want} \rightarrow\Box\Diamond\text{cs\_c}$}}
+{\indent\textit{\textbf{producer starvation free}: $\Box\Diamond\text{producer@want} \rightarrow\Box\Diamond\text{cs\_p}$}}
+{\indent\textit{\textbf{deadlock free}: $\Box\Diamond(\text{consumer@want}\wedge\text{producer@want})\rightarrow\hspace*{2.5cm}\Box\Diamond(\text{cs\_c}\vee\text{cs\_p})$}}
+
+\subsection{Spin options} 
 
 \begin{table}
-  \caption{Frequency of Special Characters}
-  \label{tab:freq}
-  \begin{tabular}{ccl}
-    \toprule
-    Non-English or Math&Frequency&Comments\\
-    \midrule
-    \O & 1 in 1,000& For Swedish names\\
-    $\pi$ & 1 in 5& Common in math\\
-    \$ & 4 in 5 & Used in business\\
-    $\Psi^2_1$ & 1 in 40,000& Unexplained usage\\
-  \bottomrule
+\caption{Hardware environment}
+\label{tab:env}
+\begin{tabular}{lll}
+\toprule
+CPU & Memory & Linux distribution \\
+\hline
+Xeon Gold 6134M 3.20Hz & 1 TB & Ubuntu 16.04.4 \\
+\bottomrule
 \end{tabular}
 \end{table}
 
-To set a wider table, which takes up the whole width of the page's
-live area, use the environment \textbf{table*} to enclose the table's
-contents and the table caption.  As with a single-column table, this
-wide table will ``float'' to a location deemed more desirable.
-Immediately following this sentence is the point at which
-Table~\ref{tab:commands} is included in the input file; again, it is
-instructive to compare the placement of the table here with the table
-in the printed output of this document.
 
+Table \ref{tab:env} is the machine environment of this paper and Table \ref{tab:spinv} is the Spin options of Safety and LTL verifications. The search algorithm in this paper is the DFS, because the BFS needs additional space to store the backward link. All options meanings are available on the Spin website.
+
+Spin model checker will provide a statistic if the verification is completed under the memory and maxima depth boundary. It also provides a list of unreached statements shows the proof script we write in the model but never be verified. To analyze this list, there are eight scheduling points in the model. We copy the macro of scheduling points eight times with different name, cause each copy is in the different lines. With this setting, we can tell the different between the eight scheduling points by the different lines of code.
+
+\section{Discussion}
+We verify a classic concurrent programs--consumer/producer in this paper and use a bit to denote the data buffer. This application is also one of the test case of Piko/RT (cond\_3). Table \ref{tab:verification} shows the results of the verification. However, the most interesting thing is to analyze the unreached statements. The followings reasons are certain for the unreached statements. Note that both priority runqueues are not empty at the scheduling points (never switch to idle thread) in this paper.
+
+\begin{itemize}
+\item The scheduling point in PendSV needs to insert current task to the expire runqueue, while the scheduling point in SVC don't. This cause the unreached statements in the eight scheduling points of SVC handler.
+\item If the active runqueue always has some elements, the scheduler no need to perform swap statements and the condition of next thread equals idle will not be checked. This is because there is an enqueue point just before the scheduling point, for example, the second scheduling point in the mutex unlock system call and the scheduling point in condition signal system call.
+\item If the active runqueue is empty and the expired runqueue has some elements, the condition of next thread equals idle will not be checked. For example, the scheduling point in mutex lock system call called by the condition wait system call. In this situation, the current process wants to regain the lock. If the lock is holding by others, there are two ways the current process get lock again. 1) current task has higher priority, 2) the other process is reached its timeslice and add back to expire runqueue. Obviously, it is likely that the process with lock will be placed in the expire runqueue.
+\item If the next task is equal to the current task, need not to perform context switch. This happens only in the pthread yield system call.
+\item Two scheduling points in mutex unlock system call never been executed.
+\end{itemize}
+
+The last reason is complicated that we need to consider two conditions about the mutex unlock system call. First is the system call from the mutex unlock non-privilege mode. The second is called via the condition wait system call. In the first situation, the processor mode has been changed by the \texttt{svc} instruction because other process want to get lock but failed. Consider that the current process has the lock, the thread state must not be \textit{BLOCKED}. The first scheduling point in mutex unlock system call is guarded by the thread state equals \textit{BLOCKED} condition will never be executed under first situation. However, the first scheduling point will always be executed in the second situation. Because the conditional statement in mutex unlock system call is deterministic. The second scheduling point in mutex unlock system call will never be executed under the second situation. This is the reason why there are two out of eight scheduling point not be executed.
+
+\begin{table}
+\caption{The 4 verification results}
+\label{tab:verification}
+\begin{tabular}{rcccc}
+\toprule
+ & \textbf{Depth} & \textbf{States} & \textbf{Memory} & \textbf{Time} \\
+ \cmidrule{2-5}
+Safety & 23,619,898 & 5.84e+09 & 314 GB & 3.2 hours \\
+ \cmidrule{2-5}
+consu\_starv & 49,295,820 & 1.01e+10 & 707 GB & 10.4 hours \\
+ \cmidrule{2-5}
+produ\_starv & 49,678,300 & 1.01e+10 & 707 GB & 10.4 hours \\
+ \cmidrule{2-5}
+Deadlock & 40,484,755 & 8.11e+09 & 477.2 GB & 6.75 hours \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \begin{table*}
-  \caption{Some Typical Commands}
-  \label{tab:commands}
-  \begin{tabular}{ccl}
-    \toprule
-    Command &A Number & Comments\\
-    \midrule
-    \texttt{{\char'134}author} & 100& Author \\
-    \texttt{{\char'134}table}& 300 & For tables\\
-    \texttt{{\char'134}table*}& 400& For wider tables\\
-    \bottomrule
-  \end{tabular}
+\caption{Options of Spin model checker}
+\label{tab:spinv}
+\begin{tabular}{rccc}
+\toprule
+\multicolumn{4}{c}{Spin Version 6.4.8 - 2 March 2018} \\
+\midrule
+ & \textbf{Spin options} & \textbf{Verification options} & \textbf{Runtime options} \\
+ \cmidrule{2-4}
+Safety properties & \texttt{-a} & \texttt{-DXUSAFE}, \texttt{-DCOLLAPSE}, & \texttt{-m100000000} \\
+& & \texttt{-DSAFETY}, \texttt{-DNOCLAIM}, & (\texttt{-m<changeable>}) \\
+& & (\texttt{-DMA=24}), \texttt{-DNOFAIR}, & \\
+& & \texttt{-DMEMLIM=<changeable>} & \\
+\cmidrule{2-4}
+LTL acceptance & \texttt{-a}, & \texttt{-DXUSAFE}, \texttt{-DCOLLAPSE}, & \texttt{-m100000000}, \\
+cycles & \texttt{-DLTL} & (\texttt{-DMA=24}), \texttt{-DNOFAIR}, & \texttt{-a}, \\
+& & \texttt{-DMEMLIM=<changeable>} & \texttt{-N <ltl name>} \\
+\bottomrule
+\end{tabular}
 \end{table*}
-% end the environment with {table*}, NOTE not {table}!
-
-It is strongly recommended to use the package booktabs~\cite{Fear05}
-and follow its main principles of typography with respect to tables:
-\begin{enumerate}
-\item Never, ever use vertical rules.
-\item Never use double rules.
-\end{enumerate}
-It is also a good idea not to overuse horizontal rules.
-
-
-\subsection{Figures}
-
-Like tables, figures cannot be split across pages; the best placement
-for them is typically the top or the bottom of the page nearest their
-initial cite.  To ensure this proper ``floating'' placement of
-figures, use the environment \textbf{figure} to enclose the figure and
-its caption.
-
-This sample document contains examples of \texttt{.eps} files to be
-displayable with \LaTeX.  If you work with pdf\LaTeX, use files in the
-\texttt{.pdf} format.  Note that most modern \TeX\ systems will convert
-\texttt{.eps} to \texttt{.pdf} for you on the fly.  More details on
-each of these are found in the \textit{Author's Guide}.
-
-As was the case with tables, you may want a figure that spans two
-columns.  To do this, and still to ensure proper ``floating''
-placement of tables, use the environment \textbf{figure*} to enclose
-the figure and its caption.  And don't forget to end the environment
-with \textbf{figure*}, not \textbf{figure}!
-
-
-\subsection{Theorem-like Constructs}
-
-Other common constructs that may occur in your article are the forms
-for logical constructs like theorems, axioms, corollaries and proofs.
-ACM uses two types of these constructs:  theorem-like and
-definition-like.
-
-Here is a theorem:
-\begin{theorem}
-  Let $f$ be continuous on $[a,b]$.  If $G$ is
-  an antiderivative for $f$ on $[a,b]$, then
-  \begin{displaymath}
-    \int^b_af(t)\,dt = G(b) - G(a).
-  \end{displaymath}
-\end{theorem}
-
-Here is a definition:
-\begin{definition}
-  If $z$ is irrational, then by $e^z$ we mean the
-  unique number that has
-  logarithm $z$:
-  \begin{displaymath}
-    \log e^z = z.
-  \end{displaymath}
-\end{definition}
-
-The pre-defined theorem-like constructs are \textbf{theorem},
-\textbf{conjecture}, \textbf{proposition}, \textbf{lemma} and
-\textbf{corollary}.  The pre-defined de\-fi\-ni\-ti\-on-like constructs are
-\textbf{example} and \textbf{definition}.  You can add your own
-constructs using the \textsl{amsthm} interface~\cite{Amsthm15}.  The
-styles used in the \verb|\theoremstyle| command are \textbf{acmplain}
-and \textbf{acmdefinition}.
-
-Another construct is \textbf{proof}, for example,
-
-\begin{proof}
-  Suppose on the contrary there exists a real number $L$ such that
-  \begin{displaymath}
-    \lim_{x\rightarrow\infty} \frac{f(x)}{g(x)} = L.
-  \end{displaymath}
-  Then
-  \begin{displaymath}
-    l=\lim_{x\rightarrow c} f(x)
-    = \lim_{x\rightarrow c}
-    \left[ g{x} \cdot \frac{f(x)}{g(x)} \right ]
-    = \lim_{x\rightarrow c} g(x) \cdot \lim_{x\rightarrow c}
-    \frac{f(x)}{g(x)} = 0\cdot L = 0,
-  \end{displaymath}
-  which contradicts our assumption that $l\neq 0$.
-\end{proof}
 
 \section{Conclusions}
-This paragraph will end the body of this sample document.
-Remember that you might still have Acknowledgments or
-Appendices; brief samples of these
-follow.  There is still the Bibliography to deal with; and
-we will make a disclaimer about that here: with the exception
-of the reference to the \LaTeX\ book, the citations in
-this paper are to articles which have nothing to
-do with the present subject and are used as
-examples only.
-%\end{document}  % This is where a 'short' article might terminate
-
-
-
-\appendix
-%Appendix A
-\section{Headings in Appendices}
-The rules about hierarchical headings discussed above for
-the body of the article are different in the appendices.
-In the \textbf{appendix} environment, the command
-\textbf{section} is used to
-indicate the start of each Appendix, with alphabetic order
-designation (i.e., the first is A, the second B, etc.) and
-a title (if you include one).  So, if you need
-hierarchical structure
-\textit{within} an Appendix, start with \textbf{subsection} as the
-highest level. Here is an outline of the body of this
-document in Appendix-appropriate form:
-\subsection{Introduction}
-\subsection{The Body of the Paper}
-\subsubsection{Type Changes and  Special Characters}
-\subsubsection{Math Equations}
-\paragraph{Inline (In-text) Equations}
-\paragraph{Display Equations}
-\subsubsection{Citations}
-\subsubsection{Tables}
-\subsubsection{Figures}
-\subsubsection{Theorem-like Constructs}
-\subsubsection*{A Caveat for the \TeX\ Expert}
-\subsection{Conclusions}
-\subsection{References}
-Generated by bibtex from your \texttt{.bib} file.  Run latex,
-then bibtex, then latex twice (to resolve references)
-to create the \texttt{.bbl} file.  Insert that \texttt{.bbl}
-file into the \texttt{.tex} source file and comment out
-the command \texttt{{\char'134}thebibliography}.
-% This next section command marks the start of
-% Appendix B, and does not continue the present hierarchy
-\section{More Help for the Hardy}
-
-Of course, reading the source code is always useful.  The file
-\path{acmart.pdf} contains both the user guide and the commented
-code.
-
-\begin{acks}
-  The authors would like to thank Dr. Yuhua Li for providing the
-  MATLAB code of the \textit{BEPS} method.
-
-  The authors would also like to thank the anonymous referees for
-  their valuable comments and helpful suggestions. The work is
-  supported by the \grantsponsor{GS501100001809}{National Natural
-    Science Foundation of
-    China}{http://dx.doi.org/10.13039/501100001809} under Grant
-  No.:~\grantnum{GS501100001809}{61273304}
-  and~\grantnum[http://www.nnsf.cn/youngscientists]{GS501100001809}{Young
-    Scientists' Support Program}.
-
-\end{acks}
+We adapt an existing machine-assisted framework to fit the requirement of model checking and verify several properties of a simple concurrent program under the specific conditions. The model contains the simulation of hardware and software aspects. Moreover, we do not construct any mathematical proof, the PROMELA language is C-like that anyone can rebuild at any stages of the system life cycle by their own (the effort of this paper is about 7 man-months and the Piko/RT is still in development) and the verification time is within one day (3 hours for safety property). This means model checking have its advantage on verifying a real-world system at the early stage comparing to the system optimized for formal verification.

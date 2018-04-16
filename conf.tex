@@ -1,6 +1,10 @@
 \documentclass[sigconf]{acmart}
 
 \usepackage{booktabs} % For formal tables
+\usepackage{subcaption}
+\usepackage{url}
+\usepackage[inline]{enumitem}
+\usepackage{multicol}
 
 
 % Copyright
@@ -21,7 +25,7 @@
 \acmISBN{}
 
 %Conference
-\acmConference[CTHPC'18]{Workshop on Compiler Techniques and System Software for High-performance and Embedded Computing}{May 2018}{NCCU, Taiwan}
+\acmConference[CTHPC'18]{Workshop on Compiler Techniques and System Software for High-performance and Embedded Computing}{May 2018}{National Chung Cheng University, Taiwan}
 \acmYear{}
 \copyrightyear{}
 
@@ -30,14 +34,14 @@
 \acmPrice{}
 
 % These commands are optional
-%\acmBooktitle{Transactions of the ACM Woodstock conference}
-%\editor{Jennifer B. Sartor}
-%\editor{Theo D'Hondt}
-%\editor{Wolfgang De Meuter}
+\acmBooktitle{}
+\editor{}
+\editor{}
+\editor{}
 
 
 \begin{document}
-\title{A Spin-based model checking for simple concurrent programs on preemptive RTOS}
+\title{A Spin-based model checking for the simple concurrent program on a preemptive RTOS}
 %\titlenote{Produces the permission block, and
 %  copyright information}
 %\subtitle{Extended Abstract}
@@ -45,41 +49,28 @@
 %  \texttt{acmart.pdf} document}
 
 
-\author{Ben Trovato}
-\orcid{1234-5678-9012}
+\author{Chen-Kai Lin}
 \affiliation{%
-  \institution{Institute for Clarity in Documentation}
-  \streetaddress{P.O. Box 1212}
-  \city{Dublin}
-  \state{Ohio}
-  \postcode{43017-6221}
+  \institution{Institute of Information Science, Academia Sinica}
+  \city{Taipei}
+  \country{Taiwan}
 }
-\email{trovato@corporation.com}
+\email{kai.zsv@gmail.com}
 
-\author{G.K.M. Tobin}
+\author{Ching-Chun (Jim) Huang}
 \affiliation{%
-  \institution{Institute for Clarity in Documentation}
-  \streetaddress{P.O. Box 1212}
-  \city{Dublin}
-  \state{Ohio}
-  \postcode{43017-6221}
+  \institution{Department of Computer Science and Information Engineering, NCKU}
+  \city{Tainan}
+  \country{Taiwan}
 }
-\email{webmaster@marysville-ohio.com}
-
-\author{Lars Th{\o}rv{\"a}ld}
-\affiliation{%
-  \institution{The Th{\o}rv{\"a}ld Group}
-  \streetaddress{1 Th{\o}rv{\"a}ld Circle}
-  \city{Hekla}
-  \country{Iceland}}
-\email{larst@affiliation.org}
+\email{jserv.tw@gmail.com}
 
 % The default list of authors is too long for headers.
-\renewcommand{\shortauthors}{B. Trovato et al.}
+\renewcommand{\shortauthors}{C.K. Lin and Jim Huang}
 
 
 \begin{abstract}
-
+We adapt an existing preemptive scheduling model of RTOS kernel by eChronos from machine-assisted proof to Spin-based model checker. The model we modified can be automatically verified rather than formulating proofs by hand. Moreover, we look into the designs of a Linux-like real-time kernel--Piko/RT and the specification of ARMv7-M architecture to reconstruct the model, and use LTL to verify a simple concurrent programs--consumer/producer problem during the development stage of the kernel. We show that under the preemptive scheduling and the mechanism of ARMv7-M, the program will not suffer form mutual exclusion, starvation and deadlock.
 \end{abstract}
 
 \keywords{model checking, concurrent programs, preemptive scheduling}
