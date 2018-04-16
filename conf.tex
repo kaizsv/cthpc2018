@@ -70,7 +70,7 @@
 
 
 \begin{abstract}
-We adapt an existing preemptive scheduling model of RTOS kernel by eChronos from machine-assisted proof to Spin-based model checker. The model we modified can be automatically verified rather than formulating proofs by hand. Moreover, we look into the designs of a Linux-like real-time kernel--Piko/RT and the specification of ARMv7-M architecture to reconstruct the model, and use LTL to verify a simple concurrent programs--consumer/producer problem during the development stage of the kernel. We show that under the preemptive scheduling and the mechanism of ARMv7-M, the program will not suffer form mutual exclusion, starvation and deadlock.
+We adapt an existing preemptive scheduling model of RTOS kernel by eChronos from machine-assisted proof to Spin-based model checker. The model we constructed can be automatically verified rather than formulating proofs by hand. Moreover, we look into the designs of a Linux-like real-time kernel--Piko/RT and the specification of ARMv7-M architecture to reconstruct the model, and use LTL to specify a simple concurrent programs--consumer/producer problem during the development stage of the kernel. We show that under the preemptive scheduling and the mechanism of ARMv7-M, the program will not suffer from race condition, starvation, and deadlock.
 \end{abstract}
 
 \keywords{model checking, concurrent programs, preemptive scheduling}
