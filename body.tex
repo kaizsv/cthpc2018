@@ -236,3 +236,10 @@ Deadlock & 40,484,755 & 8.11e+09 & 477.2 GB & 6.75 hours \\
 
 \section{Conclusions}
 We adapt an existing machine-assisted framework to fit the requirement of model checking and verify several properties of a simple concurrent program under the specific conditions. The model contains the simulation of hardware and software aspects. Moreover, we do not construct any mathematical proof, the PROMELA language is C-like that anyone can rebuild at any stages of the system life cycle by their own (the effort of this paper is about 7 man-months and the Piko/RT is still in development) and the verification time is within one day (3 hours for safety property). This means model checking have its advantage on verifying a real-world system at the early stage comparing to the system optimized for formal verification.
+
+However, there are still some defects in this paper that need to be accomplished.
+
+\begin{enumerate}
+\item The cost (time and memory usage) of adding one process to verify is too expensive in checking the OS source code. There are two possible ways to deal with. First, split the model into several layers and verify each layer one by one. Another way is to construct hand proof, Delzanno et al. \cite{EPTCS161.13} has proved that using a specific number of process can represent the situation of n processes in Spin.
+\item How to claim the abstract model and the real-world system are truly homogeneous. One possible way is to construct a mechanism that extract the PROMELA model from the C source code automatically rather than built by human.
+\end{enumerate}
