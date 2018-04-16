@@ -15,17 +15,9 @@ We use Spin as our model checking tool and build an abstract scheduling model on
 Spin \cite{SpinRoot, Ben-Ari:2008:PSM:1349767, Holzmann:2003:SMC:1405716} is an open-source verification tool of multi-threaded software developed in the Computing Science Research group of Bell Lab. The theory behind Spin is the $\omega$-automaton, which is the variation of classic finite state automata with acceptance conditions on infinite executions. Consider Figure \ref{fig:fsaex}, note that the termination of the automata would not necessarily be a desirable result. We can declare some state that will be visited infinitely often by labeling \textit{accept}, i.e. Run state, as a legal run. Because the states are finite, the infinite run ($\omega$-run) will anyway repeat itself at the certain degree just like Figure \ref{fig:buchi} shows. If Spin find an $\omega$-run with some state labeling \textit{accept}, it can claim that the automata is accepted. This is so called the B\"uchi acceptance.
 
 \begin{figure}
-\begin{subfigure}[b]{0.2\textwidth}
-\includegraphics[width=\textwidth]{img/fsaex}
-\caption{Finite state infinite run automata.}
-\label{fig:fsaex}
-\end{subfigure}
+\subfloat[][Finite state infinite run automata.]{\includegraphics[width=0.22\textwidth]{img/fsaex}\label{fig:fsaex}}
 \quad
-\begin{subfigure}[b]{0.16\textwidth}
-\includegraphics[width=\textwidth]{img/buchi}
-\caption{A path of $\omega$-run}
-\label{fig:buchi}
-\end{subfigure}
+\subfloat[][A path of $\omega$-run]{\includegraphics[width=0.16\textwidth]{img/buchi}\label{fig:buchi}}
 \caption{Example of $\omega$-automaton}
 \end{figure}
 
