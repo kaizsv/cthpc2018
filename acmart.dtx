@@ -3410,15 +3410,14 @@ Computing Machinery]
 %   This is the conference command
 %    \begin{macrocode}
 \newcommand\acmConference[4][]{%
-  \gdef\acmConference@shortname{#1}%
-  \gdef\acmConference@name{#2}%
-  \gdef\acmConference@date{#3}%
-  \gdef\acmConference@venue{#4}%
+  \gdef\acmConference@shortname{}%
+  \gdef\acmConference@name{}%
+  \gdef\acmConference@date{}%
+  \gdef\acmConference@venue{}%
   \ifx\acmConference@shortname\@empty
-    \gdef\acmConference@shortname{#2}%
+    \gdef\acmConference@shortname{}%
   \fi}
-\acmConference[Conference'17]{ACM Conference}{July 2017}{Washington,
-  DC, USA}
+\acmConference[]{}{}{}
 %    \end{macrocode}
 %
 % \end{macro}
@@ -4595,13 +4594,13 @@ Computing Machinery]
     \fi
     \if@ACM@manuscript\else
        \if@ACM@journal\else % Print the conference information
-         {\itshape \acmConference@shortname, \acmConference@date, \acmConference@venue}\par
+         {\itshape \acmConference@shortname \acmConference@date \acmConference@venue}\par
        \fi
     \fi
     \if@printcopyright
       \copyright\ \@copyrightyear\ \@copyrightowner\\
     \else
-     \@copyrightyear.\
+     %\@copyrightyear.\
     \fi
     \if@ACM@manuscript
       Manuscript submitted to ACM\\
